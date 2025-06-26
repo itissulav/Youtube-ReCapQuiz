@@ -1,3 +1,4 @@
+const API_KEY = "Your API Key";
 console.log("Background script loaded and running");
 
 async function askGemini2_5(videoTitle, videoUrl, timeStamp) {
