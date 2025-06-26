@@ -1,4 +1,4 @@
-const API_KEY = "AIzaSyCsWoos8mutS8lXZmhgaVPnLDu4_zGUsHk";
+const API_KEY = "Your API Key";
 console.log("Background script loaded and running");
 
 
