@@ -1,63 +1,70 @@
-const API_KEY = "Your API Key";
-console.log("Background script loaded and running");
-
+/**
+ * Ask Gemini 2.5 API to generate a quiz.
+ */
 async function askGemini2_5(videoTitle, videoUrl, timeStamp) {
   const prompt = `
-You are an AI designed to generate quiz questions based on the YouTube video content.
+You are an AI designed to generate quiz questions based on YouTube video content.
 
-Your task is to create a quiz based on the video title and URL given below. The user has watched the video till the time stamp seconds. See the transcripts or captions if transcripts are not available and according to the captions till the timestamp generate a quiz.
-For time stamps that are longer than 15 minutes, make sure that there are sufficient number of quiz questions. The quiz should cover every topic that has been taught till the timestamp of the video. for time stamps till 5 mins make 7 questions. till 15 make 15 atleast. till 30 make 25 atleast. and so on. but the limit is 50 questions, even if time stamp is 3hrs.
-Phrase the question in simplest terms such that a person who watched the video 30 mins ago can understand it. Also make the explanations simple as well.
-Do **not** use phrases like "according to the video" or "the video says." Focus purely on the knowledge that a student might have absorbed by this point.
+Your task is to create a quiz based on the video title and URL given below. The user has watched the video till the time stamp in seconds. Use the captions (or transcript) available until that point.
+
+For timestamps:
+- Up to 5 minutes: 7 questions
+- Up to 15 minutes: at least 15
+- Up to 30 minutes: at least 25
+- Over 30: proportionally more
+
+Do NOT say "according to the video". Focus only on the *knowledge* a student would retain.
 
 Video Title: "${videoTitle}"  
 YouTube URL: ${videoUrl}  
 Timestamp: ${timeStamp} seconds
 
-Your response **must** follow this strict JSON structure:
+Return ONLY a valid JSON in this format:
+
 {
   "quizTitle": "string",
   "questions": [
     {
       "question": "string",
       "options": ["A.", "B.", "C.", "D."],
-      "answer": "A", // the correct option
+      "answer": "A", 
       "explanation": "string"
     },
     ...
   ]
 }
+`;
 
-Make sure all fields are correctly filled. Do not return anything outside the JSON format.`;
 
   const body = {
     contents: [
       {
         role: "user",
-        parts: [
-          { text: prompt }
-        ]
+        parts: [{ text: prompt }]
       }
     ]
   };
+  const proxyUrl = "https://youtube-recap-quiz-proxy.vercel.app/api/google-proxy";
 
-  // Replace this URL with your actual Vercel deployment URL
-  const proxyUrl = "https://your-vercel-project.vercel.app/api/google-proxy";
+  try {
+    const response = await fetch(proxyUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
 
-  const response = await fetch(proxyUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
+    if (!response.ok) {
+      throw new Error(`Gemini API Error: ${response.status} - ${response.statusText}`);
+    }
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+    const data = await response.json();
+    console.log("Gemini 2.5 response:", data);
+
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "No quiz generated.";
+  } catch (error) {
+    console.error("Gemini API call failed:", error);
+    throw error;
   }
-
-  const data = await response.json();
-  console.log("Gemini 2.5 response via proxy:", data);
-
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini";
 }
 
 let videoTitle = "";
