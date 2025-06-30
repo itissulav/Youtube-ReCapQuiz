@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube ReCapQuiz",
+  "version": "1.0",
+  "description": "Adds a 'Quiz' tab to YouTube videos that generates quizzes based on video content using Gemini 2.5.",
+  "permissions": ["scripting", "activeTab", "storage", "tabs"],
+  "host_permissions": ["https://www.youtube.com/*"],
+
+  "action": {
+    "default_popup": "public/popup.html",
+    "default_title": "YouTube ReCapQuiz"
+  },
+
+  "background": {
+    "service_worker": "scripts/background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/watch*"],
+      "js": ["scripts/contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "public/popup.html",
+        "public/popup.css"
+      ],
+      "matches": ["*://www.youtube.com/*"]
+    }
+  ]
+}
