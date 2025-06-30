@@ -24,10 +24,8 @@ function insertVideoPlayerButton() {
         const player = document.querySelector("video");
         const timestamp = player ? Math.floor(player.currentTime) : 0;
 
-        // Immediately show the panel with loading animation
         showLoadingPanel();
 
-        // Send message to get quiz data
         chrome.runtime.sendMessage(
           {
             type: "finalizeVideoData",
@@ -49,7 +47,6 @@ function insertVideoPlayerButton() {
 }
 
 function showLoadingPanel() {
-  // Remove existing panel if present
   const existing = document.getElementById("youtube-quiz-panel");
   if (existing) existing.remove();
 
@@ -73,16 +70,32 @@ function showLoadingPanel() {
   `;
 
   quizPanel.innerHTML = `
-    <div class="loading-bar-container" style="position: relative; width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin-top: 10px;">
-      <div class="loading-bar" style="position: absolute; height: 100%; width: 30%; background: #cc0000; animation: loadingBarMove 1.5s linear infinite;"></div>
+    <div id="quiz-panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <span style="font-weight: 600;">YouTube Quiz</span>
+      <div>
+        <button id="minimize-btn" style="margin-right: 8px; background: none; color: white; border: none; font-size: 16px; cursor: pointer;">—</button>
+        <button id="close-btn" style="background: none; color: white; border: none; font-size: 16px; cursor: pointer;">✕</button>
+      </div>
     </div>
-    <p style="margin-top: 10px;">Generating Quiz...</p>
+    <div id="quiz-panel-content">
+      <div class="loading-bar-container" style="position: relative; width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin-top: 10px;">
+        <div class="loading-bar" style="position: absolute; height: 100%; width: 30%; background: #cc0000; animation: loadingBarMove 1.5s linear infinite;"></div>
+      </div>
+      <p style="margin-top: 10px;">Generating Quiz...</p>
+    </div>
   `;
 
-  // Insert at the top of the sidebar
   sidebar.prepend(quizPanel);
 
-  // Add animation keyframes once
+  document.getElementById("close-btn").onclick = () => quizPanel.remove();
+
+  document.getElementById("minimize-btn").onclick = () => {
+    const content = document.getElementById("quiz-panel-content");
+    const isMinimized = quizPanel.getAttribute("data-minimized") === "true";
+    content.style.display = isMinimized ? "" : "none";
+    quizPanel.setAttribute("data-minimized", !isMinimized);
+  };
+
   if (!document.getElementById("quiz-loading-style")) {
     const style = document.createElement("style");
     style.id = "quiz-loading-style";
@@ -97,22 +110,18 @@ function showLoadingPanel() {
 }
 
 function showErrorPanel(msg) {
-  const quizPanel = document.getElementById("youtube-quiz-panel");
-  if (!quizPanel) return;
-  quizPanel.innerHTML = `<p>${msg}</p>`;
+  const content = document.querySelector("#quiz-panel-content");
+  if (content) content.innerHTML = `<p>${msg}</p>`;
 }
-
-
-
-insertVideoPlayerButton();
 
 function injectQuizUI(rawResponse) {
   const quizPanel = document.getElementById("youtube-quiz-panel");
-  if (!quizPanel) return;
+  const content = quizPanel?.querySelector("#quiz-panel-content");
+  if (!quizPanel || !content) return;
 
-  quizPanel.innerHTML = "";
-  quizPanel.style.display = "flex";
-  quizPanel.style.flexDirection = "column";
+  content.innerHTML = "";
+  content.style.display = "flex";
+  content.style.flexDirection = "column";
 
   let quizLoaded = false;
   let quiz = null;
@@ -129,10 +138,10 @@ function injectQuizUI(rawResponse) {
   }
 
   if (quizLoaded) {
-    console.log(quiz);
     const titleEl = document.createElement("h3");
+    titleEl.style.marginBottom = "2rem";
     titleEl.textContent = quiz.quizTitle;
-    quizPanel.appendChild(titleEl);
+    content.appendChild(titleEl);
 
     quiz.questions.forEach((q, idx) => {
       const questionBlock = document.createElement("div");
@@ -152,25 +161,24 @@ function injectQuizUI(rawResponse) {
         input.type = "radio";
         input.name = `q${idx}`;
         input.value = opt.split(".")[0].trim();
-
         label.appendChild(input);
         label.append(` ${opt}`);
         optionsDiv.appendChild(label);
       });
 
       questionBlock.appendChild(optionsDiv);
-      quizPanel.appendChild(questionBlock);
+      content.appendChild(questionBlock);
     });
 
     const submitBtn = document.createElement("button");
     submitBtn.className = "btn";
     submitBtn.textContent = "Submit";
-    submitBtn.onclick = () => scoreQuiz(quiz, submitBtn, quizPanel);
-    quizPanel.appendChild(submitBtn);
+    submitBtn.onclick = () => scoreQuiz(quiz, submitBtn, content);
+    content.appendChild(submitBtn);
   } else {
     const errorMessage = document.createElement("p");
     errorMessage.textContent = "There was an Error in format. Please reload the video and try again";
-    quizPanel.appendChild(errorMessage);
+    content.appendChild(errorMessage);
   }
 
   const style = document.createElement("style");
@@ -181,23 +189,6 @@ function injectQuizUI(rawResponse) {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-    }
-
-    #youtube-quiz-panel {
-      background-color: #181818;
-      color: #fff;
-      padding: 16px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.6);
-      max-height: 700px;
-      overflow-y: auto;
-      margin-bottom: 2rem;
-    }
-
-    #youtube-quiz-panel h3 {
-      font-weight: 500;
-      margin-bottom: 12px;
-      font-size: 16px;
     }
 
     #youtube-quiz-panel .quiz-card {
@@ -267,21 +258,12 @@ function injectQuizUI(rawResponse) {
       color: #ccc;
     }
 
-    .quiz-loading-bar-wrapper {
-      background-color: #333;
-      height: 6px;
-      border-radius: 6px;
-      overflow: hidden;
-      margin-bottom: 20px;
-    }
-
     .quiz-loading-bar {
       height: 100%;
       width: 40%;
       background: linear-gradient(to right, #cc0000, #ff4444);
       animation: slide 1s linear infinite;
       border-radius: 6px;
-      margin-bottom: 2rem;
     }
 
     @keyframes slide {
@@ -292,7 +274,7 @@ function injectQuizUI(rawResponse) {
   document.head.appendChild(style);
 }
 
-function scoreQuiz(quiz, submitBtn, quizPanel) {
+function scoreQuiz(quiz, submitBtn, panel) {
   let failedList = [];
   let score = 0;
   let unanswered = 0;
@@ -319,13 +301,13 @@ function scoreQuiz(quiz, submitBtn, quizPanel) {
       ? `You left ${unanswered} unanswered. Score: ${score} / ${quiz.questions.length}`
       : `Score: ${score} / ${quiz.questions.length}`;
   resultE1.style.marginBottom = "16px";
-  quizPanel.appendChild(resultE1);
+  panel.appendChild(resultE1);
 
   const explanationButton = document.createElement("button");
   explanationButton.className = "btn explainationBtn";
   explanationButton.textContent = "Explanations ↓";
-  explanationButton.onclick = () => loadExplainations(quiz, failedList, quizPanel);
-  quizPanel.appendChild(explanationButton);
+  explanationButton.onclick = () => loadExplainations(quiz, failedList, panel);
+  panel.appendChild(explanationButton);
 }
 
 function loadExplainations(quiz, failedList, quizPanel) {
@@ -351,3 +333,5 @@ function loadExplainations(quiz, failedList, quizPanel) {
     quizPanel.appendChild(explanationCard);
   });
 }
+
+insertVideoPlayerButton();
