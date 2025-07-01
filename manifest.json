@@ -3,7 +3,7 @@
   "name": "YouTube ReCapQuiz",
   "version": "1.0",
   "description": "Adds a 'Quiz' tab to YouTube videos that generates quizzes based on video content using Gemini 2.5.",
-  "permissions": ["scripting", "activeTab", "storage", "tabs"],
+  "permissions": ["activeTab", "tabs"],
   "host_permissions": ["https://www.youtube.com/*"],
 
   "action": {
